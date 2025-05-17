@@ -1,7 +1,7 @@
 #include <cstdint>
 #include <fstream>
 #include <iostream>
-#include "result.h"
+#include <result.h>
 
 constexpr unsigned int MEMORY_SIZE = 4096;
 constexpr unsigned int START_ADDRESS = 0x200;
