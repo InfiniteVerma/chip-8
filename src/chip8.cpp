@@ -11,6 +11,8 @@
 #include "iostream"
 #include "keypad.h"
 
+#define DEBUG
+
 #ifdef DEBUG
 #define LOG(msg) cout << msg << "\n";
 #else
@@ -306,7 +308,9 @@ void Chip8::set_sound_timer(uint8_t reg) {
 
 void Chip8::binary_or(uint8_t reg1, uint8_t reg2) {
     LOG("BINARY_OR: reg1: " << static_cast<int>(reg1) << " : reg2: " << static_cast<int>(reg2));
+    LOG("BINARY_OR: val1: " << static_cast<int>(registers[reg1]) << " : val2: " << static_cast<int>(registers[reg2]));
     registers[reg1] = (registers[reg1] | registers[reg2]);
+    LOG("BINARY_OR final: " << static_cast<int>(registers[reg1]));
 }
 
 void Chip8::binary_and(uint8_t reg1, uint8_t reg2) {
@@ -321,8 +325,9 @@ void Chip8::binary_xor(uint8_t reg1, uint8_t reg2) {
 
 void Chip8::add_regs(uint8_t reg1, uint8_t reg2) {
     LOG("ADD_REGS: reg1: " << static_cast<int>(reg1) << " : reg2: " << static_cast<int>(reg2));
-    int sum = registers[reg1] + registers[reg2];
-    registers[reg1] = sum & 0xFF;
+    LOG("ADD_REGS: val1: " << static_cast<int>(registers[reg1]) << " : val2: " << static_cast<int>(registers[reg2]));
+    uint16_t sum = registers[reg1] + registers[reg2];
+    registers[reg1] = static_cast<uint8_t>(sum & 0xFF);
     set_register(0xF, sum > 0xFF ? 1 : 0);
 }
 
@@ -362,13 +367,17 @@ void Chip8::sub_regs_reverse(uint8_t reg1, uint8_t reg2) {
 void Chip8::shift_right_regs(uint8_t reg1, uint8_t reg2) {
     LOG("SHIFT_RIGHT_REGS: reg1: " << static_cast<int>(reg1)
                                    << " : reg2: " << static_cast<int>(reg2));
-    registers[reg1] = (registers[reg1] >> 1);
+
+    set_register(0xF, (registers[reg1] & 0x0F) == 1? 1 : 0);
+    registers[reg1] = (registers[reg1] >> 1) & 0xFF;
 }
 
 void Chip8::shift_left_regs(uint8_t reg1, uint8_t reg2) {
     LOG("SHIFT_LEFT_REGS: reg1: " << static_cast<int>(reg1)
                                   << " : reg2: " << static_cast<int>(reg2));
-    registers[reg1] = (registers[reg1] << 1);
+
+    set_register(0xF, (registers[reg1] & 0xF0) == 1 ? 1 : 0);
+    registers[reg1] = (registers[reg1] << 1) & 0xFF;
 }
 
 void Chip8::add_to_register(uint8_t reg, uint8_t val) {
