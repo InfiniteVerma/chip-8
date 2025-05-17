@@ -6,6 +6,7 @@
 #include <chrono>
 #include <fstream>
 #include <thread>
+#include <random>
 
 #include "constants.h"
 #include "iostream"
@@ -162,9 +163,19 @@ void Chip8::emulateCycle() {
                 case 0xA:
                     set_index_register(sec_third_fourth);
                     break;
+                case 0xC:
+                    static std::random_device rd;  // Non-deterministic seed
+                    static std::mt19937 gen(rd()); // Mersenne Twister engine
+                    static std::uniform_int_distribution<> distrib(0, second_byte);
+                    set_register(second_nibble, static_cast<uint8_t>(distrib(gen)));
                 case 0xD:
                     display(second_nibble, third_nibble, static_cast<int>(fourth_nibble));
                     break;
+                case 0xE: {
+                    switch (second_byte) {
+                        //case 0x9E:
+                    }
+                }
                 case 0xF: {
                     switch (second_byte) {
                         case 0x07:
@@ -178,6 +189,9 @@ void Chip8::emulateCycle() {
                             break;
                         case 0x18:
                             set_sound_timer(second_nibble);
+                            break;
+                        case 0x29:
+                            set_font(second_nibble);
                             break;
                         case 0x1E:
                             add_to_index_register(second_nibble);
@@ -236,7 +250,10 @@ void Chip8::skip_if_regs_not_equal(uint8_t reg1, uint8_t reg2) {
                                          << " and reg2: " << static_cast<int>(reg2));
     LOG("SKIP_IF_REGS_NOT_EQUAL: val1: " << static_cast<int>(registers[reg1])
                                          << " and val2: " << static_cast<int>(registers[reg2]));
-    if (registers[reg1] != registers[reg2]) pc += 2;
+    if (registers[reg1] != registers[reg2])
+        pc += 2;
+    else
+        LOG("NOT SKIPPING!\n");
 }
 
 void Chip8::jump(uint16_t addr) {
@@ -306,9 +323,15 @@ void Chip8::set_sound_timer(uint8_t reg) {
     sound_timer = registers[reg];
 }
 
+void Chip8::set_font(uint8_t reg) {
+    LOG("SET_FONT reg: " << static_cast<int>(reg));
+    index_register = reg;
+}
+
 void Chip8::binary_or(uint8_t reg1, uint8_t reg2) {
     LOG("BINARY_OR: reg1: " << static_cast<int>(reg1) << " : reg2: " << static_cast<int>(reg2));
-    LOG("BINARY_OR: val1: " << static_cast<int>(registers[reg1]) << " : val2: " << static_cast<int>(registers[reg2]));
+    LOG("BINARY_OR: val1: " << static_cast<int>(registers[reg1])
+                            << " : val2: " << static_cast<int>(registers[reg2]));
     registers[reg1] = (registers[reg1] | registers[reg2]);
     LOG("BINARY_OR final: " << static_cast<int>(registers[reg1]));
 }
@@ -325,9 +348,17 @@ void Chip8::binary_xor(uint8_t reg1, uint8_t reg2) {
 
 void Chip8::add_regs(uint8_t reg1, uint8_t reg2) {
     LOG("ADD_REGS: reg1: " << static_cast<int>(reg1) << " : reg2: " << static_cast<int>(reg2));
-    LOG("ADD_REGS: val1: " << static_cast<int>(registers[reg1]) << " : val2: " << static_cast<int>(registers[reg2]));
-    uint16_t sum = registers[reg1] + registers[reg2];
-    registers[reg1] = static_cast<uint8_t>(sum & 0xFF);
+    LOG("ADD_REGS: val1: " << static_cast<int>(registers[reg1])
+                           << " : val2: " << static_cast<int>(registers[reg2]));
+
+    uint16_t lhs = static_cast<uint16_t>(registers[reg1]);
+    uint16_t rhs = static_cast<uint16_t>(registers[reg2]);
+    uint16_t sum = lhs + rhs;
+
+    LOG("Sum: " << sum << ", sum & 0xFF: " << (sum & 0xFF));
+    registers[reg1] = (sum & 0xFF);
+    LOG("Updated reg[" << static_cast<int>(reg1) << "] = " << static_cast<int>(registers[reg1]));
+
     set_register(0xF, sum > 0xFF ? 1 : 0);
 }
 
@@ -368,7 +399,7 @@ void Chip8::shift_right_regs(uint8_t reg1, uint8_t reg2) {
     LOG("SHIFT_RIGHT_REGS: reg1: " << static_cast<int>(reg1)
                                    << " : reg2: " << static_cast<int>(reg2));
 
-    set_register(0xF, (registers[reg1] & 0x0F) == 1? 1 : 0);
+    set_register(0xF, (registers[reg1] & 0x0F) == 1 ? 1 : 0);
     registers[reg1] = (registers[reg1] >> 1) & 0xFF;
 }
 

@@ -38,6 +38,7 @@ class Chip8 {
     void skip_if_regs_not_equal(uint8_t, uint8_t);
     void shift_right_regs(uint8_t, uint8_t);
     void shift_left_regs(uint8_t, uint8_t);
+    void set_font(uint8_t);
     void set_delay_timer(uint8_t);
     void set_sound_timer(uint8_t);
     void get_key(uint8_t);
