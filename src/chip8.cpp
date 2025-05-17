@@ -395,6 +395,7 @@ void Chip8::binary_coded_dec_conversion(uint8_t reg) {
 }
 
 void Chip8::get_key(uint8_t reg) {
+    LOG("GET_KEY and store to reg: " << static_cast<int>(reg));
     SDL_Event event;
     bool key_pressed = false;
 
@@ -407,6 +408,8 @@ void Chip8::get_key(uint8_t reg) {
             Keypad::Pressed pressed_key = Keypad::getInstance()->translateScancodeToChip8(keycode);
             if (pressed_key != Keypad::NO_KEY_PRESSED) {
                 cout << "Found a valid key!: " << pressed_key << "\n";
+                assert(pressed_key >= 0 && pressed_key <= 15);
+                registers[reg] = pressed_key;
                 key_pressed = true;
             }
         }
