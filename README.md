@@ -18,13 +18,10 @@ cd build/bin
 
 ## Demo
 
-### IBM Logo
 
-https://github.com/user-attachments/assets/0998a6a7-6b08-452e-939a-81c5c136cd94
-
-### Chip 8 Logo
-
-https://github.com/user-attachments/assets/2dd38500-cef6-4342-b4b2-d8922322fbaa
+| IMB Logo  | CHIP-8 Logo |
+| ------------- | ------------- |
+| ![ibm-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/e32b2717-2dd6-4d54-8e10-2b53ca732069)  | ![chip8_logo-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/05a46165-e08a-4402-9368-afa47c6fab98)  |
 
 ## Pending Stuff
 
