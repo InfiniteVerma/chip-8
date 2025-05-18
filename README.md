@@ -1,6 +1,6 @@
 # CHIP-8
 
-A CHIP-8 emulator (rather interpreter) implementation in C++
+A CHIP-8 emulator (rather interpreter) implementation in C++ using SDL3
 
 ## Build
 
