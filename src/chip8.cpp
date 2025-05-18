@@ -310,6 +310,7 @@ void Chip8::set_reg_to_random(uint8_t reg, uint8_t val) {
 
 void Chip8::clear_screen() {
     LOG("CLEAR SCREEN");
+    memset(display_window, 0, sizeof(display_window));
     Display::getInstance()->clearScreen();
 }
 
