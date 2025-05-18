@@ -20,7 +20,8 @@ class Chip8 {
     uint8_t registers[16];
 
     bool waiting_for_key;
-    uint8_t reg_for_key;
+    bool is_key_saved;  // is true is pressed_key holds valid value
+    uint8_t pressed_key;
 
     void emulateCycle();
 

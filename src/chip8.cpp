@@ -13,7 +13,7 @@
 #include "iostream"
 #include "keypad.h"
 
-//#define DEBUG
+// #define DEBUG
 
 #ifdef DEBUG
 #define LOG(msg) cout << msg << "\n";
@@ -95,7 +95,8 @@ void Chip8::emulateCycle() {
             push_frame(sec_third_fourth);  // sets pc internally
             break;
         default:
-            pc += 2;
+            pc += 2;  // incrementing program counter here
+
             switch (static_cast<int>(first_nibble)) {
                 case 0x0: {
                     switch (second_byte) {
@@ -476,29 +477,19 @@ void Chip8::binary_coded_dec_conversion(uint8_t reg) {
 }
 
 void Chip8::get_key(uint8_t reg) {
-    cout << "GET_KEY_CALLED!!!!\n\n\n";
     LOG("GET_KEY and store to reg: " << static_cast<int>(reg));
-    SDL_Event event;
-    bool key_pressed = false;
-
-    while (SDL_PollEvent(&event)) {  // loop till all events are handled
-        if (event.type == SDL_EVENT_KEY_DOWN) {
-            cout << "KEY PRESSED: raw: " << event.key.raw << "\n";
-            SDL_Keycode keycode = SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, false);
-            cout << hex << "SCAN KEY: " << keycode << dec << "\n";
-
-            Keypad::Pressed pressed_key = Keypad::getInstance()->translateScancodeToChip8(keycode);
-            if (pressed_key != Keypad::NO_KEY_PRESSED) {
-                cout << "Found a valid key!: " << pressed_key << "\n";
-                assert(pressed_key >= 0 && pressed_key <= 15);
-                registers[reg] = pressed_key;
-                key_pressed = true;
-            }
-        }
-    }
-
-    if (!key_pressed) {
-        cout << "No key pressed, decrementing pc!\n";
+    if (waiting_for_key && is_key_saved) {
+        // this happens if it's the second time get_key is called. Previous iteration has set the
+        // flag to true this time, there was a key pressed and saved in 'key_pressed' uint8_t
+        LOG("GET_KEY key: " << pressed_key
+                            << " was pressed! Putting it in register and resetting vars");
+        assert(pressed_key <= 0xF);
+        registers[reg] = pressed_key;
+        waiting_for_key = false;
+        is_key_saved = false;
+    } else {
+        waiting_for_key = true;
+        is_key_saved = false;
         pc -= 2;
     }
 }
@@ -568,8 +559,12 @@ void Chip8::run() {
                 Keypad::Action action =
                     event.type == SDL_EVENT_KEY_UP ? Keypad::KEY_UP : Keypad::KEY_DOWN;
 
-                cout << "Going to update: " << key_pressed << " with action: " << action << "\n";
                 Keypad::getInstance()->updateKeyInState(static_cast<uint16_t>(key_pressed), action);
+
+                if (event.type == SDL_EVENT_KEY_DOWN && waiting_for_key && !is_key_saved) {
+                    is_key_saved = true;
+                    pressed_key = key_pressed;
+                }
             }
         }
 
