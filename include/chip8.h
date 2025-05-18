@@ -26,16 +26,20 @@ class Chip8 {
 
     void clear_screen();
     void jump(uint16_t);
+    void jump_with_offset(uint16_t, uint8_t);
     void set_register(uint8_t, uint8_t);
     void add_to_register(uint8_t, uint8_t);
     void binary_coded_dec_conversion(uint8_t);
     void add_to_index_register(uint8_t);
     void set_index_register(uint16_t);
+    void set_reg_to_random(uint8_t, uint8_t);
     void display(uint8_t, uint8_t, uint8_t);
     void skip_next_if_equal(uint8_t, uint8_t);
     void skip_next_if_not_equal(uint8_t, uint8_t);
     void skip_if_regs_equal(uint8_t, uint8_t);
     void skip_if_regs_not_equal(uint8_t, uint8_t);
+    void skip_if_key_pressed(uint8_t);
+    void skip_if_key_not_pressed(uint8_t);
     void shift_right_regs(uint8_t, uint8_t);
     void shift_left_regs(uint8_t, uint8_t);
     void set_font(uint8_t);

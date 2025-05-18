@@ -5,9 +5,10 @@
 #include <cassert>
 #include <chrono>
 #include <fstream>
-#include <thread>
 #include <random>
+#include <thread>
 
+#include "SDL3/SDL_events.h"
 #include "constants.h"
 #include "iostream"
 #include "keypad.h"
@@ -52,7 +53,7 @@ Result<int, string> Chip8::readROM(const char* romPath) {
 void Chip8::emulateCycle() {
     // fetch
     uint16_t instruction = (memory[pc] << 8) | memory[pc + 1];
-    LOG("Instruction: " << hex << instruction << dec);
+    LOG("PC: 0x" << hex << pc << dec << " - Instruction: " << hex << instruction << dec);
     //  pc += 2;
 
     // decode
@@ -83,6 +84,8 @@ void Chip8::emulateCycle() {
                 pc += 2;
             } else if (second_byte == 0xEE) {
                 pop_frame();  // sets pc internally
+            } else {
+                assert(0);
             }
             break;
         case 0x1:
@@ -93,12 +96,9 @@ void Chip8::emulateCycle() {
             break;
         default:
             pc += 2;
-            switch (first_nibble) {
+            switch (static_cast<int>(first_nibble)) {
                 case 0x0: {
                     switch (second_byte) {
-                        case 0xE0:
-                            clear_screen();
-                            break;
                         default:
                             cout << "ERROR not supporting instruction: " << hex << instruction
                                  << dec << "\n";
@@ -163,18 +163,29 @@ void Chip8::emulateCycle() {
                 case 0xA:
                     set_index_register(sec_third_fourth);
                     break;
+                case 0xB:
+                    jump_with_offset(sec_third_fourth, second_nibble);
+                    break;
                 case 0xC:
-                    static std::random_device rd;  // Non-deterministic seed
-                    static std::mt19937 gen(rd()); // Mersenne Twister engine
-                    static std::uniform_int_distribution<> distrib(0, second_byte);
-                    set_register(second_nibble, static_cast<uint8_t>(distrib(gen)));
+                    set_reg_to_random(second_nibble, second_byte);
+                    break;
                 case 0xD:
                     display(second_nibble, third_nibble, static_cast<int>(fourth_nibble));
                     break;
                 case 0xE: {
                     switch (second_byte) {
-                        //case 0x9E:
+                        case 0x9E:
+                            skip_if_key_pressed(second_nibble);
+                            break;
+                        case 0xA1:
+                            skip_if_key_not_pressed(second_nibble);
+                            break;
+                        default:
+                            cout << "ERROR not supporting instruction: " << hex << instruction
+                                 << dec << "\n";
+                            assert(0);
                     }
+                    break;
                 }
                 case 0xF: {
                     switch (second_byte) {
@@ -217,7 +228,6 @@ void Chip8::emulateCycle() {
                          << "> not supported!\n";
                     assert(0);
             }
-            break;
     }
 
     LOG("Instruction complete!");
@@ -250,16 +260,51 @@ void Chip8::skip_if_regs_not_equal(uint8_t reg1, uint8_t reg2) {
                                          << " and reg2: " << static_cast<int>(reg2));
     LOG("SKIP_IF_REGS_NOT_EQUAL: val1: " << static_cast<int>(registers[reg1])
                                          << " and val2: " << static_cast<int>(registers[reg2]));
-    if (registers[reg1] != registers[reg2])
+    if (registers[reg1] != registers[reg2]) pc += 2;
+}
+
+void Chip8::skip_if_key_pressed(uint8_t reg1) {
+    LOG("SKIP_IF_KEY_PRESSED: " << hex << static_cast<int>(registers[reg1]) << dec);
+    uint8_t key = registers[reg1];
+    assert(key <= 0xF);
+    if (Keypad::getInstance()->isKeyPressed(key)) {
+        LOG("PRESSED! updating pc");
         pc += 2;
-    else
-        LOG("NOT SKIPPING!\n");
+    } else {
+        LOG("NOT PRESSED, not updating pc");
+    }
+}
+
+void Chip8::skip_if_key_not_pressed(uint8_t reg1) {
+    LOG("SKIP_IF_KEY_NOT_PRESSED: " << hex << static_cast<int>(registers[reg1]) << dec);
+    uint8_t key = registers[reg1];
+    assert(key <= 0xF);
+    if (!Keypad::getInstance()->isKeyPressed(key)) {
+        LOG("NOT PRESSED! updating pc");
+        pc += 2;
+    } else {
+        LOG("PRESSED! not updating PC");
+    }
 }
 
 void Chip8::jump(uint16_t addr) {
-    LOG("JUMP to: " << hex << addr << dec);
+    LOG("JUMP to: 0x" << hex << addr << dec);
     assert(addr <= 0xFFF);
     pc = addr;
+    LOG("PC now: 0x" << hex << pc << dec);
+}
+
+void Chip8::jump_with_offset(uint16_t addr, uint8_t reg1) {
+    LOG("JUMP WITH OFFSET: " << hex << addr << dec);
+    pc = addr + registers[reg1];
+}
+
+void Chip8::set_reg_to_random(uint8_t reg, uint8_t val) {
+    LOG("SET_REG_TO_RANDOM: reg: " << reg << " - val: " << hex << val << dec);
+    static std::random_device rd;   // Non-deterministic seed
+    static std::mt19937 gen(rd());  // Mersenne Twister engine
+    static std::uniform_int_distribution<> distrib(0, val);
+    set_register(reg, static_cast<uint8_t>(distrib(gen)));
 }
 
 void Chip8::clear_screen() {
@@ -270,8 +315,6 @@ void Chip8::clear_screen() {
 void Chip8::display(uint8_t x, uint8_t y, uint8_t sprite_height) {
     LOG("DISPLAY: x: " << static_cast<int>(x) << " , y: " << static_cast<int>(y)
                        << " sprite_height: " << static_cast<int>(sprite_height));
-    cout << "DISPLAY: x: " << static_cast<int>(x) << " , y: " << static_cast<int>(y)
-         << " sprite_height: " << static_cast<int>(sprite_height) << "\n";
     assert(x < 16);
     assert(y < 16);
     uint8_t pos_x = registers[x];
@@ -289,8 +332,6 @@ void Chip8::display(uint8_t x, uint8_t y, uint8_t sprite_height) {
             int y = (pos_y + row) % HEIGHT;
 
             const SDL_FRect pixel = {(float)x * SCALE, (float)y * SCALE, SCALE, SCALE};
-
-            display_window[x][y] = 0;
 
             if ((sprite_mem_ptr[row] >> (7 - col)) & 1) {
                 display_window[x][y] ^= 1;
@@ -435,6 +476,7 @@ void Chip8::binary_coded_dec_conversion(uint8_t reg) {
 }
 
 void Chip8::get_key(uint8_t reg) {
+    cout << "GET_KEY_CALLED!!!!\n\n\n";
     LOG("GET_KEY and store to reg: " << static_cast<int>(reg));
     SDL_Event event;
     bool key_pressed = false;
@@ -472,31 +514,31 @@ void Chip8::store_to_registers(uint8_t reg) {
     for (int i = 0; i <= reg; i++) {
         memory[index_ptr + i] = registers[i];
     }
+    cout << "DONE\n";
 }
 
 void Chip8::load_into_registers(uint8_t reg) {
-    cout << "LOAD_INTO_REGISTERS from 0 till: " << static_cast<int>(reg) << "\n";
+    LOG("LOAD_INTO_REGISTERS from 0 till: " << static_cast<int>(reg));
 
     uint16_t index_ptr = index_register;
     for (int i = 0; i <= reg; i++) {
         registers[i] = memory[index_ptr + i];
     }
-    cout << "DONE\n";
 }
 
 void Chip8::push_frame(uint16_t mem_loc) {
-    cout << "PUSH_FRAME: mem_loc: " << hex << mem_loc << dec << "\n";
+    LOG("PUSH_FRAME: mem_loc: " << hex << mem_loc << dec);
     assert(mem_loc <= 0xFFF);
-    cout << "Pushing pc: " << hex << pc + 2 << dec << " to stack\n";
+    LOG("Pushing pc: 0x" << hex << pc + 2 << dec << " to stack");
     st.push(pc + 2);
     pc = mem_loc;
 }
 
 void Chip8::pop_frame() {
-    cout << "POP FRAME\n";
+    LOG("POP FRAME");
     assert(!st.empty());
     pc = st.top();
-    cout << "Updating pc to: " << hex << pc << dec << "\n";
+    LOG("Updating pc to: " << hex << pc << dec);
     st.pop();
 }
 
@@ -517,13 +559,18 @@ void Chip8::run() {
             if (event.type == SDL_EVENT_QUIT) {
                 running = false;
                 break;
+            } else if (event.type == SDL_EVENT_KEY_DOWN || event.type == SDL_EVENT_KEY_UP) {
+                SDL_Keycode key = event.key.key;
+
+                Keypad::Pressed key_pressed = Keypad::getInstance()->translateScancodeToChip8(key);
+                if (key_pressed == Keypad::NO_KEY_PRESSED) break;
+
+                Keypad::Action action =
+                    event.type == SDL_EVENT_KEY_UP ? Keypad::KEY_UP : Keypad::KEY_DOWN;
+
+                cout << "Going to update: " << key_pressed << " with action: " << action << "\n";
+                Keypad::getInstance()->updateKeyInState(static_cast<uint16_t>(key_pressed), action);
             }
-            // else if (event.type == SDL_EVENT_KEY_DOWN) {
-            //     cout << "KEY PRESSED: raw: " << event.key.raw << "\n";
-            //     SDL_Keycode keycode =
-            //         SDL_GetKeyFromScancode(event.key.scancode, event.key.mod, false);
-            //     cout << hex << "SCAN KEY: " << keycode << dec << "\n";
-            // }
         }
 
         if (!running) break;

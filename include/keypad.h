@@ -1,6 +1,10 @@
 #pragma once
 
+#include <iostream>
 #include <unordered_map>
+
+#include "SDL3/SDL_keycode.h"
+using std::ostream;
 
 #define SDLK_1 0x00000031u /**< '1' */
 #define SDLK_2 0x00000032u /**< '2' */
@@ -22,7 +26,6 @@
 #define SDLK_C 0x00000063u /**< 'c' */
 #define SDLK_V 0x00000076u /**< 'v' */
 
-#include "SDL3/SDL_keycode.h"
 class Keypad {
    public:
     enum Pressed {
@@ -45,6 +48,11 @@ class Keypad {
         NO_KEY_PRESSED,
     };
 
+    enum Action {
+        KEY_UP = 0,   // key is released
+        KEY_DOWN = 1  // key is pressed
+    };
+
     static Keypad* getInstance() {
         if (!instance) {
             instance = new Keypad();
@@ -54,9 +62,15 @@ class Keypad {
     }
 
     static Pressed translateScancodeToChip8(SDL_Keycode);
+    static void updateKeyInState(uint8_t key, Action action);
+    static void printKeyState();
+    static bool isKeyPressed(uint8_t key);
 
    private:
     Keypad() {}
     static Keypad* instance;
     static const std::unordered_map<int, Pressed> mapping;
+    static Action key_state[16];
 };
+
+std::ostream& operator<<(std::ostream& os, const Keypad::Pressed& pressed);

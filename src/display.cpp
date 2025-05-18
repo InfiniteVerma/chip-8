@@ -42,8 +42,10 @@ void Display::clearScreen() {
 
 void Display::redraw(int pos_x, int pos_y, const uint8_t display_window[WIDTH][HEIGHT],
                      uint8_t sprite_height) {
-    for (int row = 0; row < sprite_height; row++) {
-        for (int col = 0; col < 8; col++) {
+    // for (int row = 0; row < sprite_height; row++) {
+    //     for (int col = 0; col < 8; col++) {
+    for (int row = 0; row < HEIGHT; row++) {
+        for (int col = 0; col < WIDTH; col++) {
             int x = (pos_x + col) % WIDTH;
             int y = (pos_y + row) % HEIGHT;
 
