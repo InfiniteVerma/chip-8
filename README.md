@@ -31,6 +31,7 @@ https://github.com/user-attachments/assets/2dd38500-cef6-4342-b4b2-d8922322fbaa
  - [ ] Pass tests from chip8-test-suite
  - [ ] Keypad actions
  - [ ] Add beep sound
+ - [ ] Use only the CHIP-8 ram memory for stack/registers
 
 ## Resources
 
