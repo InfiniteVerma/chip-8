@@ -13,7 +13,7 @@
 #include "iostream"
 #include "keypad.h"
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define LOG(msg) cout << msg << "\n";
